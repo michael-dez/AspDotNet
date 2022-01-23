@@ -1,0 +1,85 @@
+version: "3.7"
+
+services:
+
+
+  dotnetkestrel:
+
+    image: itsy:latest 
+
+    volumes: 
+      - ./asp/ITSY/:/ITSY
+
+    depends_on:
+      - postgres
+    ports:
+      - "5000:5000"
+      - "5001:5001"
+    # testing db 
+    #stdin_open: true
+    #tty: true
+    #entrypoint: /bin/bash
+    # end db test
+
+    networks:
+      - frontend
+      - backend
+
+
+
+  nginx:
+
+    image: nginx:1.15-alpine
+    
+    volumes:
+      - ./data/nginx:/etc/nginx/conf.d
+      - ./data/certbot/conf:/etc/letsencrypt
+      - ./data/certbot/www:/var/www/certbot
+        # added volume to test certbot on main site
+      - ./data/site:/var/www/html/bigkea.com
+    depends_on:
+      - dotnetkestrel
+    command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - frontend
+
+  postgres:
+
+    image: postgres:12.1-alpine
+
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+
+    environment:
+      - POSTGRES_PASSWORD=*
+      - POSTGRES_DB=*
+
+    ports:
+      - "5432"
+    
+    networks:
+      - backend
+
+  certbot:
+    
+    image: certbot/certbot
+    
+    volumes:
+      - ./data/certbot/conf:/etc/letsencrypt
+      - ./data/certbot/www:/var/www/certbot
+
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+
+
+
+
+networks:
+        frontend:
+        backend:
+
+          #configs:
+        # COMPLETE CONFIG SECTION 
+                  
